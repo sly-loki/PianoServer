@@ -75,9 +75,11 @@ QTcpSocket * clientConnection = nullptr;
 void onNewConnection()
 {
     std::cout << "new connection" << std::endl;
+    if (clientConnection)
+        delete clientConnection;
     clientConnection = server.nextPendingConnection();
 //    std::cout << clientConnection->
-    clientConnection->write("connection accepted");
+//    clientConnection->write("connection accepted");
 }
 
 void event(PianoKeyEvent event)
