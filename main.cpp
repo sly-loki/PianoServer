@@ -14,18 +14,19 @@ void onTick();
 
 QTcpServer server;
 QTimer timer;
-
+Piano piano;
 
 
 void event(PianoKeyEvent event);
 void onNewConnection();
 void syncTask();
+void needReadClient();
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    Piano piano;
 
+    qRegisterMetaType<PianoKeyEvent>("PianoKeyEvent");
     QObject::connect(&piano, &Piano::keyStateChanged, event);
     QObject::connect(&server, &QTcpServer::newConnection, onNewConnection);
 
@@ -47,11 +48,13 @@ QTcpSocket * clientConnection = nullptr;
 void onNewConnection()
 {
     std::cout << "new connection" << std::endl;
-    if (clientConnection)
+    if (clientConnection) {
         delete clientConnection;
+    }
     clientConnection = server.nextPendingConnection();
 //    std::cout << clientConnection->
 //    clientConnection->write("connection accepted");
+    QObject::connect(clientConnection, &QTcpSocket::readyRead, needReadClient);
     event({ET_Time, 0, QTime::currentTime()});
 }
 
@@ -84,4 +87,22 @@ void event(PianoKeyEvent event)
         clientConnection->write(ss.str().c_str());
         clientConnection->flush();
     }
+}
+
+void needReadClient()
+{
+    char data[10];
+    size_t readed = clientConnection->read(data, 3);
+    if (readed != 3)
+        return;
+
+    switch (data[0]) {
+    case 'p':
+        QString noteString("   ");
+        noteString[0] = data[1];
+        Note note = data[1];//noteString.toInt();
+        piano.playNote(note);
+        break;
+    }
+    clientConnection->readAll();
 }
