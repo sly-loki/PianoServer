@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     timer.setInterval(1000);
     QObject::connect(&timer, &QTimer::timeout, syncTask);
     timer.start();
-//    piano.playNote(0x48);
+    piano.playNote(0x48);
 
     return a.exec();
 }

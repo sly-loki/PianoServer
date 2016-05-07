@@ -6,6 +6,7 @@
 #include <QTime>
 #include <QThread>
 #include <QMutex>
+#include <QTimer>
 
 
 typedef int Note;
@@ -65,6 +66,10 @@ class Piano : public QObject
     Q_OBJECT
     QFile deviceFile;
     ReadingThread *rThread;
+    QTimer timer;
+    Note lastNote;
+private slots:
+    void needTurnOffNote();
 public:
     explicit Piano(QObject *parent = 0);
     ~Piano();

@@ -8,7 +8,9 @@ Piano::Piano(QObject *parent)
     : QObject(parent)
     , rThread(nullptr)
 {
-
+    timer.setInterval(700);
+    timer.setSingleShot(true);
+    connect(&timer, SIGNAL(timeout()), this, SLOT(needTurnOffNote()));
 }
 
 Piano::~Piano()
@@ -55,6 +57,20 @@ void Piano::playNote(Note note)
     data[0] = 0x90;
     data[1] = (char)note;
     data[2] = 0x3f;
+    lastNote = note;
+    rThread->writeData(data, 3);
+    timer.start();
+}
+
+void Piano::needTurnOffNote()
+{
+    if (!rThread)
+        return;
+
+    char data[3];
+    data[0] = 0x90;
+    data[1] = (char)lastNote;
+    data[2] = 0;
     rThread->writeData(data, 3);
 }
 
@@ -90,11 +106,11 @@ void ReadingThread::run()
         }
 
         if (writeQueue.size()) {
-            std::cout << "write data: ";
+//            std::cout << "write data: ";
             queueMutex.lock();
             DataToWrite &d = writeQueue.back();
-            std::cout << std::hex;
-            std::cout << (int)d.data[0] << " " << (int)d.data[1] << " " << (int)d.data[2] << std::endl;
+//            std::cout << std::hex;
+//            std::cout << (int)d.data[0] << " " << (int)d.data[1] << " " << (int)d.data[2] << std::endl;
             file.write(d.data, d.size);
             writeQueue.pop_back();
             queueMutex.unlock();
