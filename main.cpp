@@ -3,59 +3,19 @@
 #include <iostream>
 #include <sstream>
 #include <cstdio>
-#include <QFile>
-#include <QThread>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTime>
 
+#include "piano.h"
+
 void onTick();
 
-QFile f("/dev/midi3");
+
 QTcpServer server;
 QTimer timer;
 
-enum EventType
-{
-    ET_KeyDown,
-    ET_KeyUp,
-    ET_Time
-};
 
-struct PianoKeyEvent
-{
-    EventType type;
-    unsigned int key;
-    QTime time;
-};
-
-class ReadingThread : public QThread
-{
-    Q_OBJECT
-signals:
-    void newEvent(PianoKeyEvent event);
-
-protected:
-    virtual void run() override
-    {
-        if (!f.open(QIODevice::ReadOnly | QIODevice::Unbuffered))
-        {
-            std::cout << "Error opening file" << std::endl;
-        }
-        while (true)
-        {
-            char data[50];
-            f.read(data, 1);
-            if ((data[0] & 0xf0) == 0x90)
-            {
-                f.read(data, 2);
-                EventType type = (data[1])?ET_KeyDown:ET_KeyUp;
-//                std::cout << "emit event";
-                emit newEvent({type, data[0], QTime::currentTime()});
-            }
-        }
-    }
-};
 
 void event(PianoKeyEvent event);
 void onNewConnection();
@@ -64,17 +24,21 @@ void syncTask();
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    ReadingThread t;
+    Piano piano;
 
-    QObject::connect(&t, SIGNAL(finished()), &a, SLOT(quit()));
-    QObject::connect(&t, &ReadingThread::newEvent, event);
-    t.start();
+    QObject::connect(&piano, &Piano::keyStateChanged, event);
     QObject::connect(&server, &QTcpServer::newConnection, onNewConnection);
+
+    piano.connectToDevice("/dev/midi3");
+
     if (!server.listen(QHostAddress::Any, 1289))
         std::cout << "listen error" << std::endl;
+
     timer.setInterval(1000);
     QObject::connect(&timer, &QTimer::timeout, syncTask);
     timer.start();
+//    piano.playNote(0x48);
+
     return a.exec();
 }
 
@@ -121,5 +85,3 @@ void event(PianoKeyEvent event)
         clientConnection->flush();
     }
 }
-
-#include "main.moc"
